@@ -1,0 +1,115 @@
+{
+  "downloaded": "2026-11-04",
+  "license": "CC0 1.0 Universal",
+  "assets": [
+    {
+      "id": "rough_linen",
+      "name": "Rough Linen",
+      "maps": [
+        {
+          "type": "Diffuse",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_diff_1k.jpg",
+          "file": "fabric-color.jpg",
+          "bytes": 835801,
+          "resolution": "1k"
+        },
+        {
+          "type": "nor_gl",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_nor_gl_1k.jpg",
+          "file": "fabric-normal.jpg",
+          "bytes": 916843,
+          "resolution": "1k"
+        },
+        {
+          "type": "Rough",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_rough_1k.jpg",
+          "file": "fabric-rough.jpg",
+          "bytes": 1083725,
+          "resolution": "1k"
+        }
+      ],
+      "source": "https://polyhaven.com/a/rough_linen",
+      "license_url": "https://polyhaven.com/license",
+      "license": "CC0 1.0 Universal"
+    },
+    {
+      "id": "studio_small_09",
+      "name": "Studio Small 09",
+      "maps": [
+        {
+          "type": "HDRI",
+          "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_09_1k.hdr",
+          "file": "studio.hdr",
+          "bytes": 1615248,
+          "resolution": "1k"
+        }
+      ],
+      "source": "https://polyhaven.com/a/studio_small_09",
+      "license_url": "https://polyhaven.com/license",
+      "license": "CC0 1.0 Universal"
+    },
+    {
+      "id": "painted_plaster_wall",
+      "name": "Painted Plaster Wall",
+      "maps": [
+        {
+          "bytes": 686726,
+          "resolution": "1k",
+          "file": "concrete-color.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/painted_plaster_wall/painted_plaster_wall_diff_1k.jpg",
+          "type": "Diffuse"
+        },
+        {
+          "bytes": 900461,
+          "resolution": "1k",
+          "file": "concrete-normal.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/painted_plaster_wall/painted_plaster_wall_nor_gl_1k.jpg",
+          "type": "nor_gl"
+        },
+        {
+          "bytes": 354762,
+          "resolution": "1k",
+          "file": "concrete-rough.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/painted_plaster_wall/painted_plaster_wall_rough_1k.jpg",
+          "type": "Rough"
+        }
+      ],
+      "license_url": "https://polyhaven.com/license",
+      "source": "https://polyhaven.com/a/painted_plaster_wall",
+      "license": "CC0 1.0 Universal"
+    },
+    {
+      "id": "walnut_veneer_02",
+      "name": "Walnut Veneer 02",
+      "maps": [
+        {
+          "bytes": 592833,
+          "resolution": "1k",
+          "file": "wood-color.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/walnut_veneer_02/walnut_veneer_02_diff_1k.jpg",
+          "type": "Diffuse"
+        },
+        {
+          "bytes": 362888,
+          "resolution": "1k",
+          "file": "wood-normal.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/walnut_veneer_02/walnut_veneer_02_nor_gl_1k.jpg",
+          "type": "nor_gl"
+        },
+        {
+          "bytes": 743210,
+          "resolution": "1k",
+          "file": "wood-rough.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/walnut_veneer_02/walnut_veneer_02_rough_1k.jpg",
+          "type": "Rough"
+        }
+      ],
+      "license_url": "https://polyhaven.com/license",
+      "source": "https://polyhaven.com/a/walnut_veneer_02",
+      "license": "CC0 1.0 Universal"
+    }
+  ],
+  "license_url": "https://polyhaven.com/license",
+  "provider_url": "https://polyhaven.com",
+  "provider": "Poly Haven"
+}
