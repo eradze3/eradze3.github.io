@@ -18,12 +18,13 @@ export function createProjectModel(scene) {
     electrical:mat('#ffcb3f',{emissive:'#ffb600',emissiveIntensity:1,metalness:.18,roughness:.4}),
     elv:mat('#bd67ff',{emissive:'#a84cff',emissiveIntensity:.9,metalness:.12}),
     hvac:mat('#1dd1e6',{metalness:.28,roughness:.35,emissive:'#09aeca',emissiveIntensity:.7}),
+    returnair:mat('#8fb8c8',{metalness:.28,roughness:.4,emissive:'#4e7e91',emissiveIntensity:.3}),
     plumbing:mat('#408cff',{metalness:.2,emissive:'#1d6dff',emissiveIntensity:.95}),
     fire:mat('#f35b48',{metalness:.18,emissive:'#ee3826',emissiveIntensity:.8}),hot:mat('#d89365'),
     bms:mat('#50ee88',{emissive:'#18d95c',emissiveIntensity:1.1,metalness:.1})
   };
   // Self-lit materials provide a crisp MEP highlight without a bloom pass or duplicate meshes.
-  const serviceVisuals=['electrical','elv','hvac','plumbing','fire','bms'].map(id=>({id,material:M[id],color:M[id].color.clone(),glow:M[id].emissiveIntensity}));
+  const serviceVisuals=['electrical','elv','hvac','returnair','plumbing','fire','bms'].map(id=>({id,material:M[id],color:M[id].color.clone(),glow:M[id].emissiveIntensity}));
   const routeWidth=new Map([[M.electrical,1.65],[M.elv,1.6],[M.hvac,1.3],[M.plumbing,1.65],[M.fire,1.55],[M.bms,1.75]]);
   M.frame.roughness=.37;M.frame.metalness=.65;
   const boxGeo=new THREE.BoxGeometry(1,1,1),cylGeo=new THREE.CylinderGeometry(1,1,1,8),leafGeo=new THREE.SphereGeometry(1,6,3),softCache=new Map();
@@ -35,8 +36,8 @@ export function createProjectModel(scene) {
   function beam(a,b,r,m,parent=root){const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),o=cyl(r,p.distanceTo(q),0,0,0,m,parent);o.position.copy(p.clone().add(q).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),q.sub(p).normalize());return o;}
   function linePath(points){const path=new THREE.CurvePath();for(let i=1;i<points.length;i++)path.add(new THREE.LineCurve3(new THREE.Vector3(...points[i-1]),new THREE.Vector3(...points[i])));return path;}
   function pipe(points,r,m,parent=root){const curve=linePath(points);const o=mesh(new THREE.TubeGeometry(curve,Math.max(8,points.length*3),r*(routeWidth.get(m)||1),5,false),m,parent);return {curve,o};}
-  function flow(curve,id,parent,count=2){for(let i=0;i<count;i++){const o=mesh(new THREE.SphereGeometry(.025,6,4),new THREE.MeshBasicMaterial({color:{electrical:'#fff2bc',elv:'#ecd0ff',hvac:'#c3fbff',plumbing:'#d2e8ff',bms:'#dcffe8'}[id]}),parent);o.userData.dynamic=true;flows.push({curve,id,object:o,offset:i/count});}}
-  function duct(points,w,h,parent){for(let i=1;i<points.length;i++){const a=new THREE.Vector3(...points[i-1]),b=new THREE.Vector3(...points[i]),o=box(w*1.3,h*1.3,a.distanceTo(b),0,0,0,M.hvac,parent);o.position.copy(a.clone().add(b).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),b.sub(a).normalize());}}
+  function flow(curve,id,parent,count=2){for(let i=0;i<count;i++){const o=mesh(new THREE.SphereGeometry(.025,6,4),new THREE.MeshBasicMaterial({color:{electrical:'#fff2bc',elv:'#ecd0ff',hvac:'#c3fbff',plumbing:'#d2e8ff',bms:'#dcffe8'}[id]}),parent);o.userData.dynamic=true;o.userData.flowSystem=id;flows.push({curve,id,object:o,offset:i/count});}}
+  function duct(points,w,h,parent,material=M.hvac){for(let i=1;i<points.length;i++){const a=new THREE.Vector3(...points[i-1]),b=new THREE.Vector3(...points[i]),o=box(w*1.3,h*1.3,a.distanceTo(b),0,0,0,material,parent);o.position.copy(a.clone().add(b).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),b.sub(a).normalize());}}
   function plant(x,y,z,scale,parent){cyl(scale*.15,scale*.26,x,y+scale*.13,z,M.stone,parent);cyl(scale*.132,.005,x,y+scale*.265,z,M.soil,parent);beam([x,y+scale*.23,z],[x,y+scale*.63,z],scale*.014,M.leaf,parent);for(let i=0;i<10;i++){const angle=i*2.4,yy=y+scale*(.32+(i%5)*.075),reach=scale*(.12+(i%3)*.025),ex=x+Math.cos(angle)*reach,ez=z+Math.sin(angle)*reach;beam([x,yy-.035*scale,z],[ex,yy+.035*scale,ez],scale*.006,M.leaf,parent);const leaf=mesh(leafGeo,i%3?M.leaf:M.leaf2,parent);leaf.position.set(ex,yy+.04*scale,ez);leaf.scale.set(scale*.15,scale*.018,scale*.055);leaf.rotation.set(Math.sin(i)*.35,-angle,Math.cos(i)*.3);}}
   function chair(x,z,rotation,parent){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;parent.add(g);softBox(.21,.043,.205,0,.22,0,M.seat,g,.038);const back=softBox(.205,.035,.21,0,.34,.097,M.seat,g,.04);back.rotation.x=Math.PI/2-.13;beam([0,.2,.05],[0,.4,.115],.011,M.frame,g);cyl(.014,.17,0,.12,0,M.frame,g);for(let i=0;i<5;i++){const a=i*Math.PI*2/5,xx=Math.cos(a)*.115,zz=Math.sin(a)*.115;beam([0,.045,0],[xx,.025,zz],.009,M.frame,g);const wheel=cyl(.021,.019,xx,.025,zz,M.black,g);wheel.rotation.z=Math.PI/2;}for(const xx of [-.125,.125]){beam([xx,.22,0],[xx,.3,0],.008,M.frame,g);softBox(.035,.018,.11,xx,.31,0,M.black,g,.012);}return g;}
   function desk(x,z,rotation,parent,servicesGroup){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;parent.add(g);softBox(.62,.032,.34,0,.34,0,M.wood,g,.025);for(const xx of [-.26,.26]){box(.025,.3,.027,xx,.17,-.1,M.frame,g);softBox(.045,.018,.28,xx,.025,-.02,M.frame,g,.012);}softBox(.215,.018,.145,0,.47,-.08,M.black,g,.008).rotation.x=Math.PI/2;box(.186,.116,.004,0,.47,-.068,M.screen,g);box(.014,.05,.014,0,.37,-.08,M.frame,g);softBox(.09,.008,.055,0,.36,-.08,M.frame,g,.009);softBox(.185,.01,.068,-.025,.365,.07,M.black,g,.009);for(let row=0;row<3;row++)for(let k=0;k<8;k++)box(.012,.002,.009,-.1+k*.021,.372,.05+row*.018,M.frame,g);const mouse=mesh(leafGeo,M.black,g);mouse.position.set(.14,.373,.07);mouse.scale.set(.018,.007,.027);chair(0,.29,0,g);box(.05,.004,.08,.23,.362,.03,M.white,g);cyl(.019,.037,.23,.38,-.07,M.white,g);if(servicesGroup){box(.028,.035,.028,x,.18,z-.15,M.bms,servicesGroup);}}
@@ -46,10 +47,13 @@ export function createProjectModel(scene) {
   softBox(5.65,.1,3.75,0,-.04,0,M.frame,root,.055);softBox(5.5,.055,3.65,0,.04,0,M.stone,root,.035);
   for(const x of [-2.4,2.1]){box(.65,.17,.22,x,.13,1.69,M.frame);for(let k=0;k<3;k++)plant(x-.2+k*.2,.2,1.69,.22,root);}
   const shaft=new THREE.Group();shaft.name='Continuous service shaft';root.add(shaft);
-  const shaftBack=box(.6,3.18,.035,2.32,1.59,-1.5,M.frame,shaft),shaftSide=box(.035,3.18,.42,2.61,1.59,-1.3,M.frame,shaft);
+  const shaftBack=box(.82,3.18,.035,2.2,1.59,-1.5,M.frame,shaft),shaftSide=box(.035,3.18,.7,2.61,1.59,-1.15,M.frame,shaft);
   // Vertical routes are continuous from foundation to rooftop, including in reveal view.
   const risers=[];const riserMap={electrical:[2.13,-1.34],elv:[2.24,-1.34],hvac:[2.41,-1.32],plumbing:[2.53,-1.32],bms:[2.03,-1.34]};
-  for(const[id,[x,z]]of Object.entries(riserMap)){const r=(id==='hvac'?.049:id==='plumbing'?.024:.018)*(routeWidth.get(M[id])||1);const o=cyl(r,3.2,x,1.6,z,M[id],systems[id]);o.userData.dynamic=true;risers.push({o,id,x,z});}
+  for(const[id,[x,z]]of Object.entries(riserMap)){const r=(id==='hvac'?.049:id==='plumbing'?.024:.018)*(routeWidth.get(M[id])||1);const o=id==='hvac'?box(.15,3.2,.13,x,1.6,z,M[id],systems[id]):cyl(r,3.2,x,1.6,z,M[id],systems[id]);o.userData.dynamic=true;risers.push({o,id,x,z});}
+  // Separate services remain continuous through the shaft; the water supply is not a fire or drain riser.
+  for(const route of [{name:'Return-air riser',id:'hvac',x:1.88,z:-1.25,material:M.returnair,duct:true},{name:'Fire-service riser',id:'plumbing',x:2.52,z:-1.02,material:M.fire,r:.024},{name:'Sanitary discharge and vent stack',id:'plumbing',x:2.36,z:-1.02,material:M.frame,r:.034}]){const o=route.duct?box(.15,3.2,.13,route.x,1.6,route.z,route.material,systems[route.id]):cyl(route.r,3.2,route.x,1.6,route.z,route.material,systems[route.id]);o.name=route.name;o.userData.dynamic=true;risers.push({o,id:route.id,x:route.x,z:route.z});}
+  pipe([[2.36,.03,-1.02],[2.36,-.04,-1.02],[2.36,-.04,-1.72]],.034,M.frame,systems.plumbing);
   for(let f=0;f<3;f++){
     const g=new THREE.Group();g.name=`Occupied floor ${f+1}`;g.position.y=f*1.05;g.userData.baseY=f*1.05;root.add(g);floors.push(g);
     const sg={};for(const id of Object.keys(systems)){const s=new THREE.Group();s.position.y=g.position.y;s.userData.system=id;s.userData.area='model';systems[id].add(s);sg[id]=s;}services.push(sg);
@@ -83,28 +87,32 @@ export function createProjectModel(scene) {
     if(f>0){rail([.55,1.34],[1.8,1.34],.4,g);rail([.55,-1.14],[1.8,-1.14],.4,g);}
     // Suspended ceilings: modest panels become translucent when the model is opened.
     const ceilingMat=mat('#d8d9cc',{transparent:true,opacity:.94,depthWrite:false,side:THREE.DoubleSide});ceilings.push(ceilingMat);
-    box(2.9,.018,2.7,-1.1,.947,0,ceilingMat,g);box(.6,.018,2.7,.04,.947,0,ceilingMat,g);
+    box(2.9,.018,2.7,-1.1,.80,0,ceilingMat,g);box(.6,.018,2.7,.04,.80,0,ceilingMat,g);
     // HVAC main is routed from shaft into the corridor, then to rooms; every branch connects.
     duct([[2.41,.89,-1.32],[1.9,.89,-1.32],[1.9,.89,-.4],[-2.35,.89,-.4]],.12,.09,sg.hvac);
-    for(const x of [-1.95,-1.1,-.05])for(const z of [-1,.9]){duct([[x,.89,-.4],[x,.89,z]],.075,.055,sg.hvac);box(.18,.018,.18,x,.93,z,M.white,sg.hvac);for(let k=-2;k<=2;k++)box(.13,.006,.009,x,.918,z+k*.023,M.hvac,sg.hvac);}
+    for(const x of [-1.95,-1.1,-.05])for(const z of [-1,.9]){duct([[x,.89,-.4],[x,.89,z],[x,.79,z]],.075,.055,sg.hvac);box(.18,.018,.18,x,.78,z,M.white,sg.hvac);for(let k=-2;k<=2;k++)box(.13,.006,.009,x,.768,z+k*.023,M.hvac,sg.hvac);}
     flow(linePath([[2.41,.89,-1.32],[1.9,.89,-1.32],[1.9,.89,-.4],[-2.35,.89,-.4]]),'hvac',sg.hvac,2);
+    // Room return grille connects to its own header and riser, not to the supply branch.
+    duct([[-1.55,.78,-1.35],[-1.55,.86,-1.35],[1.88,.86,-1.35],[1.88,.86,-1.25]],.10,.07,sg.hvac,M.returnair);
+    box(.32,.018,.16,-1.55,.775,-1.35,M.returnair,sg.hvac);for(let k=-3;k<=3;k++)box(.018,.01,.12,-1.55+k*.04,.762,-1.35,M.frame,sg.hvac);
+    flow(linePath([[-1.55,.78,-1.35],[-1.55,.86,-1.35],[1.88,.86,-1.35],[1.88,.86,-1.25]]),'hvac',sg.hvac,1);
     // Cable tray with two lips and connected lighting / power branches.
     pipe([[2.13,.84,-1.34],[1.7,.84,-1.34],[1.7,.84,.35],[-2.35,.84,.35]],.015,M.electrical,sg.electrical);
     box(4.05,.02,.085,-.325,.82,.35,M.frame,sg.electrical);for(const z of [.31,.39])box(4.05,.035,.009,-.325,.834,z,M.electrical,sg.electrical);
-    for(const x of [-2.05,-1.1])for(const z of [-.8,.82]){pipe([[x,.84,.35],[x,.84,z],[x,.93,z]],.008,M.electrical,sg.electrical);box(.5,.012,.035,x,.93,z,M.light,sg.electrical);}
+    for(const x of [-2.05,-1.1])for(const z of [-.8,.82]){pipe([[x,.84,.35],[x,.84,z],[x,.78,z]],.008,M.electrical,sg.electrical);box(.5,.012,.035,x,.778,z,M.light,sg.electrical);}
     flow(linePath([[2.13,.84,-1.34],[1.7,.84,-1.34],[1.7,.84,.35],[-2.35,.84,.35]]),'electrical',sg.electrical,2);
     // ELV tray follows its own route, with wall/data drops to occupied work areas.
-    const data=pipe([[2.24,.79,-1.34],[1.8,.79,-1.34],[1.8,.79,.52],[-2.35,.79,.52]],.012,M.elv,sg.elv);flow(data.curve,'elv',sg.elv,2);
-    for(const x of [-2.05,-1.1])pipe([[x,.79,.52],[x,.79,-1.48],[x,.22,-1.48]],.008,M.elv,sg.elv);
+    const data=pipe([[2.24,.86,-1.34],[1.8,.86,-1.34],[1.8,.86,.52],[-2.35,.86,.52]],.012,M.elv,sg.elv);flow(data.curve,'elv',sg.elv,2);
+    for(const x of [-2.05,-1.1])pipe([[x,.86,.52],[x,.86,-1.48],[x,.22,-1.48]],.008,M.elv,sg.elv);
     box(.08,.045,.06,-2.47,.78,1.43,M.elv,sg.elv);cyl(.015,.025,-2.47,.75,1.44,M.black,sg.elv);
     // Domestic-water connection to the WC and a separate high-level fire branch.
-    const water=pipe([[2.53,.76,-1.32],[1.46,.76,-1.32],[1.46,.3,-1.32],[.98,.3,-1.32]],.012,M.plumbing,sg.plumbing);flow(water.curve,'plumbing',sg.plumbing,1);
-    pipe([[2.55,.82,-1.3],[2.55,.82,1.12],[-2.35,.82,1.12]],.015,M.fire,sg.plumbing);
-    for(const x of [-2,-1,0,1.7]){beam([x,.82,1.12],[x,.93,1.12],.008,M.fire,sg.plumbing);cyl(.025,.012,x,.93,1.12,M.white,sg.plumbing);}
-    pipe([[2.5,.24,-1.28],[1.45,.24,-1.28],[.98,.24,-1.28]],.022,M.frame,sg.plumbing);
+    const water=pipe([[2.53,.87,-1.32],[1.46,.87,-1.32],[1.46,.3,-1.32],[.98,.3,-1.32]],.012,M.plumbing,sg.plumbing);flow(water.curve,'plumbing',sg.plumbing,1);
+    pipe([[2.52,.87,-1.02],[2.52,.87,1.12],[-2.35,.87,1.12]],.015,M.fire,sg.plumbing);
+    for(const x of [-2,-1,0,1.7]){beam([x,.87,1.12],[x,.775,1.12],.008,M.fire,sg.plumbing);cyl(.025,.012,x,.765,1.12,M.white,sg.plumbing);}
+    pipe([[.98,.16,-1.23],[1.45,.145,-1.23],[2.36,.12,-1.23],[2.36,.12,-1.02]],.022,M.frame,sg.plumbing);pipe([[.76,.37,-1.2],[.76,.15,-1.2],[1.45,.145,-1.23]],.012,M.frame,sg.plumbing);
     // BMS sensors have an actual circuit back to the riser.
-    const controls=pipe([[2.03,.73,-1.34],[1.85,.73,-1.34],[1.85,.73,-.65],[-2.35,.73,-.65]],.006,M.bms,sg.bms);flow(controls.curve,'bms',sg.bms,1);
-    for(const x of [-2.35,-.4]){pipe([[x,.73,-.65],[x,.55,-.65]],.005,M.bms,sg.bms);box(.045,.06,.025,x,.52,-.65,M.bms,sg.bms);}
+    const controls=pipe([[2.03,.845,-1.34],[1.85,.845,-1.34],[1.85,.845,-.65],[-2.35,.845,-.65]],.006,M.bms,sg.bms);flow(controls.curve,'bms',sg.bms,1);
+    for(const x of [-2.35,-.4]){pipe([[x,.845,-.65],[x,.55,-.65]],.005,M.bms,sg.bms);box(.045,.06,.025,x,.52,-.65,M.bms,sg.bms);}
     // Wall luminaires make the inhabited scale read even with the ceiling closed.
     for(const x of [-2.3,-.8])box(.2,.025,.035,x,.72,-1.62,M.light,sg.electrical);
   }
@@ -115,6 +123,7 @@ export function createProjectModel(scene) {
   const ahuBody=box(1.25,.32,.57,1.25,.25,-1.02,M.white,roofServices.hvac);ahuBody.userData.dynamic=true;ahuBody.userData.mepTarget='ahu';box(1.28,.04,.6,1.25,.43,-1.02,M.frame,roofServices.hvac);
   for(let x=.75;x<1.8;x+=.11)box(.04,.24,.015,x,.25,-.72,M.hvac,roofServices.hvac);
   duct([[2.41,.15,-1.32],[2.41,.25,-1.32],[1.88,.25,-1.32]],.13,.11,roofServices.hvac);
+  duct([[1.88,.15,-1.25],[1.88,.22,-1.25],[1.88,.22,-1.48],[1.02,.22,-1.48],[1.02,.22,-1.30]],.11,.09,roofServices.hvac,M.returnair);
   for(const x of [.95,1.55]){cyl(.14,.025,x,.47,-1.02,M.frame,roofServices.hvac);const fan=new THREE.Group();fan.position.set(x,.488,-1.02);fan.userData.dynamic=true;roofServices.hvac.add(fan);for(let i=0;i<4;i++){const b=box(.23,.012,.045,0,0,0,M.black,fan);b.rotation.y=i*Math.PI/4;}fans.push(fan);}
   // The AHU cooling connection is a distinct closed loop in the connected inspection.
   pipe([[2.13,.12,-1.34],[2.13,.18,-.65],[1.7,.18,-.65],[1.7,.25,-.74]],.012,M.electrical,roofServices.electrical);
@@ -143,7 +152,7 @@ export function createProjectModel(scene) {
     const top=roof.position.y+.12;shaftBack.scale.y=top;shaftBack.position.y=top/2;shaftSide.scale.y=top;shaftSide.position.y=top/2;
     risers.forEach(r=>{r.o.scale.y=top;r.o.position.y=top/2;});
     for(const[id,g]of Object.entries(systems))g.visible=layer==='all'||layer===id;
-    flows.forEach(f=>{f.object.visible=power&&!inspection;if(power&&!inspection)f.object.position.copy(f.curve.getPoint((runTime*.12+f.offset)%1));});
+    flows.forEach(f=>{const active=f.id==='plumbing'||power;f.object.visible=active&&!inspection;if(active&&!inspection)f.object.position.copy(f.curve.getPoint((runTime*.12+f.offset)%1));});
     if(power&&motion)fans.forEach(f=>f.rotation.y+=dt*5);
     const nextVisualKey=`${power}:${highlight}:${inspection}`;
     if(visualKey!==nextVisualKey){visualKey=nextVisualKey;serviceVisuals.forEach(s=>{s.material.emissiveIntensity=power?(inspection?.02:highlight?s.glow:.055):0;s.material.color.copy(s.color).multiplyScalar(inspection?.2:power?1:.55);});
@@ -152,5 +161,5 @@ export function createProjectModel(scene) {
     experience.update(t,dt,state);
   }
   update(0,0,{});
-  return {root,floors,roof,systems,experience,update};
+  return {root,floors,roof,systems,experience,update,engineering:{risers:risers.map(r=>({name:r.o.name,system:r.id,x:r.x,z:r.z,mesh:r.o})),supplyTerminalY:.78,ceilingY:.80,returnTerminalY:.775,fireRiser:[2.52,-1.02],dischargeStack:[2.36,-1.02]}};
 }

@@ -121,9 +121,9 @@ export const TRACE_SYSTEMS = freeze({
   },
   hvac: {
     label: 'Air', color: '#1dd1e6', title: 'Air reaches the occupied space.',
-    description: 'Follow the supply-air path from the AHU into the vertical duct, then along the upper-floor branch to a diffuser.',
-    steps: ['Air-handling unit', 'Vertical duct', 'Floor branch', 'Room diffuser'],
-    detail: 'This view traces one supply-air path. Return air and other ventilation components are outside this simplified connection view.'
+    description: 'Trace supply air from the AHU to the occupied space, then follow the separate return path back to the unit.',
+    steps: ['AHU supply', 'Supply riser and diffuser', 'Room return grille', 'Return duct to AHU'],
+    detail: 'Supply and return are distinct routes. Outdoor-air intake, relief and detailed balancing arrangements are simplified in this illustrative view.'
   },
   water: {
     label: 'Cooling water', color: '#579dff', title: 'A loop carries cooling to the coil.',

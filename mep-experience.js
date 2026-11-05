@@ -16,7 +16,8 @@ export function createMepExperience({root,roof,floors}) {
   function segment(mesh,i,a,b,width,height=null){position.copy(a).add(b).multiplyScalar(.5);direction.copy(b).sub(a);const length=direction.length();direction.multiplyScalar(1/Math.max(length,.0001));quaternion.setFromUnitVectors(height===null?up:forward,direction);scale.set(width,height===null?length:height,height===null?width:length);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(i,matrix);}
   const routes=[];
   function route(id,count,radius){const material=basic(colors[id]);material.transparent=true;material.depthWrite=false;const mesh=instances(pipeGeometry,material,count,trace);mesh.name=`AHU ${id} connection`;mesh.userData.traceSystem=id;const item={id,mesh,radius:radius*1.2,points:[],lengths:[],length:0};routes.push(item);return item;}
-  const power=route('electrical',6,.024),air=route('hvac',7,.034),supply=route('water',4,.023),returnWater=route('water',4,.023),control=route('bms',4,.018);
+  const power=route('electrical',6,.024),air=route('hvac',7,.034),supply=route('water',4,.023),returnWater=route('water',4,.023),control=route('bms',4,.018),returnAir=route('hvac',7,.029);
+  returnAir.mesh.name='AHU return-air connection';returnAir.mesh.material.color.set('#8fb8c8');
   returnWater.mesh.material.color.set('#b29bff');
   function setRoute(item,coords){item.points=coords.map(v=>new THREE.Vector3(...v));item.lengths.length=0;item.length=0;for(let i=1;i<item.points.length;i++){const length=item.points[i].distanceTo(item.points[i-1]);item.lengths.push(length);item.length+=length;segment(item.mesh,i-1,item.points[i-1],item.points[i],item.radius);}item.mesh.count=item.points.length-1;item.mesh.instanceMatrix.needsUpdate=true;}
 
@@ -30,8 +31,8 @@ export function createMepExperience({root,roof,floors}) {
   const terminalColors=['#ffcf53','#4ce7f1','#7bafff','#b29bff','#7cf6a7'];terminalColors.forEach((c,i)=>terminals.setColorAt(i,new THREE.Color(c)));
   const ahuOutline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.3,.4,.63)),new THREE.LineBasicMaterial({color:'#a8f5ff',toneMapped:false}));ahuOutline.name='Selected AHU';ahuOutline.userData.area='model';ahuOutline.userData.mepTarget='ahu';trace.add(ahuOutline);
   const pulseMaterial=basic('#ffffff');pulseMaterial.transparent=true;pulseMaterial.depthTest=false;pulseMaterial.depthWrite=false;
-  const pulses=instances(dotGeometry,pulseMaterial,15,trace);pulses.renderOrder=60;
-  const pulseColors=new THREE.Color();routes.forEach((r,j)=>{pulseColors.set(r===returnWater?'#e0d5ff':colors[r.id]);for(let i=0;i<3;i++)pulses.setColorAt(j*3+i,pulseColors);});
+  const pulses=instances(dotGeometry,pulseMaterial,18,trace);pulses.renderOrder=60;
+  const pulseColors=new THREE.Color();routes.forEach((r,j)=>{pulseColors.set(r===returnWater?'#e0d5ff':r===returnAir?'#d3edf2':colors[r.id]);for(let i=0;i<3;i++)pulses.setColorAt(j*3+i,pulseColors);});
 
   // The challenge uses exactly the same bounds and routes as its pure geometry evaluator.
   const ductMaterial=new THREE.MeshStandardMaterial({color:'#46cbdc',emissive:'#126576',emissiveIntensity:.35,roughness:.4,metalness:.3});
@@ -67,11 +68,12 @@ export function createMepExperience({root,roof,floors}) {
     if(Math.abs(lastRoof-y)<.0001&&Math.abs(lastFloor-f)<.0001)return;
     lastRoof=y;lastFloor=f;plant.position.y=y;bay.position.set(.4,f+.5,.7);
     setRoute(power,[[1.95,.32,-1.2],[2.13,.32,-1.34],[2.13,y+.18,-1.34],[2.13,y+.18,-.65],[1.7,y+.18,-.65],[1.7,y+.25,-.74]]);
-    setRoute(air,[[1.88,y+.25,-1.32],[2.41,y+.25,-1.32],[2.41,f+.89,-1.32],[1.9,f+.89,-1.32],[1.9,f+.89,-.4],[-.05,f+.89,-.4],[-.05,f+.89,.9],[-.05,f+.93,.9]]);
+    setRoute(air,[[1.88,y+.25,-1.32],[2.41,y+.25,-1.32],[2.41,f+.89,-1.32],[1.9,f+.89,-1.32],[1.9,f+.89,-.4],[-.05,f+.89,-.4],[-.05,f+.89,.9],[-.05,f+.78,.9]]);
+    setRoute(returnAir,[[-1.55,f+.775,-1.35],[-1.55,f+.86,-1.35],[1.88,f+.86,-1.35],[1.88,f+.86,-1.25],[1.88,y+.22,-1.25],[1.88,y+.22,-1.48],[1.02,y+.22,-1.48],[1.02,y+.22,-1.30]]);
     setRoute(supply,[[.13,y+.25,-.85],[.34,y+.25,-.85],[.34,y+.25,-.5],[.67,y+.25,-.5],[.67,y+.25,-.74]]);
     setRoute(returnWater,[[.67,y+.32,-.74],[.67,y+.32,-.6],[.24,y+.32,-.6],[.24,y+.32,-1.08],[.13,y+.32,-1.08]]);
     setRoute(control,[[2.05,y+.28,-.264],[2.05,y+.28,-.48],[1.94,y+.28,-.48],[1.94,y+.28,-.76],[1.84,y+.28,-.76]]);
-    putBox(terminals,0,[1.95,.32,-1.2],[.12,.22,.12]);putBox(terminals,1,[-.05,f+.93,.9],[.19,.035,.19]);putBox(terminals,2,[.13,y+.25,-.85],[.06,.06,.06]);putBox(terminals,3,[.13,y+.32,-1.08],[.06,.06,.06]);putBox(terminals,4,[2.05,y+.28,-.264],[.13,.06,.03]);terminals.instanceMatrix.needsUpdate=true;
+    putBox(terminals,0,[1.95,.32,-1.2],[.12,.22,.12]);putBox(terminals,1,[-.05,f+.78,.9],[.19,.035,.19]);putBox(terminals,2,[.13,y+.25,-.85],[.06,.06,.06]);putBox(terminals,3,[.13,y+.32,-1.08],[.06,.06,.06]);putBox(terminals,4,[2.05,y+.28,-.264],[.13,.06,.03]);terminals.instanceMatrix.needsUpdate=true;
     ahuOutline.position.set(1.25,y+.28,-1.02);
     world.set(1.25,y+.67,-1.02);root.updateWorldMatrix(true,false);tracePoint.copy(world).applyMatrix4(root.matrixWorld);
   }
@@ -101,9 +103,9 @@ export function createMepExperience({root,roof,floors}) {
       lastActive=active;let count=0;
       for(const item of routes){
         const selected=active==='all'||active===item.id;
-        item.mesh.material.color.set(item===returnWater?'#b29bff':colors[item.id]).multiplyScalar(selected?1:.12);
+        item.mesh.material.color.set(item===returnWater?'#b29bff':item===returnAir?'#8fb8c8':colors[item.id]).multiplyScalar(selected?1:.12);
         item.mesh.material.opacity=selected?1:.32;item.mesh.material.depthTest=!selected;item.mesh.renderOrder=selected?50:2;
-        if(selected){pulseColors.set(item===returnWater?'#e0d5ff':colors[item.id]);for(let i=0;i<3;i++)pulses.setColorAt(count++,pulseColors);}
+        if(selected){pulseColors.set(item===returnWater?'#e0d5ff':item===returnAir?'#d3edf2':colors[item.id]);for(let i=0;i<3;i++)pulses.setColorAt(count++,pulseColors);}
       }
       pulses.count=count;if(pulses.instanceColor)pulses.instanceColor.needsUpdate=true;
     }
@@ -112,5 +114,5 @@ export function createMepExperience({root,roof,floors}) {
     if(on){let count=0;for(let j=0;j<routes.length;j++){const item=routes[j];if(active!=='all'&&active!==item.id)continue;for(let i=0;i<3;i++){pointAlong(item,(elapsed*.16+i/3)%1,pulsePosition);scale.setScalar(.039);matrix.compose(pulsePosition,identity,scale);pulses.setMatrixAt(count++,matrix);}}pulses.instanceMatrix.needsUpdate=true;}
   }
   update(0,0,{});
-  return {traceAnchor,challengeAnchor,tracePoint,update,trace,bay,plant,routes,pulses,duct,envelope,tray,debug:{geometry:CHALLENGE_GEOMETRY,maxTraceDraws:8,maxChallengeDraws:7,additionalShadowCasters:0}};
+  return {traceAnchor,challengeAnchor,tracePoint,update,trace,bay,plant,routes,pulses,duct,envelope,tray,debug:{geometry:CHALLENGE_GEOMETRY,maxTraceDraws:9,maxChallengeDraws:7,additionalShadowCasters:0}};
 }

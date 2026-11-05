@@ -27,13 +27,13 @@ export function createInteractiveAudio({onStateChange=()=>{}}={}) {
       hum.start();overtone.start();noise.start();
     }
     const server=ambience.type==='datacentre',night=ambience.period==='night',busy=ambience.period==='busy';
-    const demand=server?1:night?.24:busy?1:.62;
+    const demand=server?1:ambience.type==='hotel'?(night?.65:1):night?.24:busy?1:.62;const fanLost=ambience.faultActive&&ambience.scenario==='power',restricted=ambience.faultActive&&['airflow','controls'].includes(ambience.scenario||'airflow');
     ramp(ambient.hum.frequency,server?86:ambience.type==='warehouse'?58:64,.5);
     ramp(ambient.overtone.frequency,server?172:128,.5);
     ramp(ambient.filter.frequency,server?840:busy?620:400,.5);
     // A closed branch does not silence the upstream fan: its hum remains present.
-    ramp(ambient.humGain.gain,.025*demand,.4);ramp(ambient.overtoneGain.gain,(server?.010:.005)*demand,.4);
-    ramp(ambient.noiseGain.gain,(ambience.faultActive?.025:.055)*demand,.4);
+    ramp(ambient.humGain.gain,.025*demand*(fanLost?(server?.4:0):1),.4);ramp(ambient.overtoneGain.gain,(server?.010:.005)*demand*(fanLost?(server?1:0):1),.4);
+    ramp(ambient.noiseGain.gain,(restricted?.025:.055)*demand*(fanLost?(server?.3:ambience.type==='hotel'?.2:0):1),.4);
   }
   async function setEnabled(value){
     if(disposed)return false;const version=++revision;enabled=!!value;manuallySuspended=false;
