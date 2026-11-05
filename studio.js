@@ -10,10 +10,18 @@ export function createStudio(scene) {
   const staticParts=new THREE.Group();root.add(staticParts);
   const std=(color,options={})=>new THREE.MeshStandardMaterial({color,roughness:.7,metalness:.15,...options});
   const pbr=studioMaterials();
-  const concrete=pbr.wall,dark=std('#111d25'),black=std('#11171c',{roughness:.42}),steel=pbr.metal,paper=std('#d7d8cd',{metalness:0,roughness:.95}),wood=pbr.wood,linen=pbr.fabric,green=std('#375e43',{metalness:0,roughness:.64,side:THREE.DoubleSide}),green2=std('#547c58',{metalness:0,roughness:.7,side:THREE.DoubleSide});
+  const concrete=pbr.wall,dark=std('#142536',{roughness:.64,metalness:.2}),black=std('#0c1823',{roughness:.38,metalness:.45}),steel=pbr.metal,paper=std('#d7d8cd',{metalness:0,roughness:.95}),wood=pbr.wood,linen=pbr.fabric,green=std('#375e43',{metalness:0,roughness:.64,side:THREE.DoubleSide}),green2=std('#547c58',{metalness:0,roughness:.7,side:THREE.DoubleSide});
   const amber=new THREE.MeshBasicMaterial({color:'#ffd0a0'}),cyan=new THREE.MeshBasicMaterial({color:'#74e6ee'}),purple=new THREE.MeshBasicMaterial({color:'#b591e2'});
+  // These reuse existing edge geometry. Hovering changes a material, not a light,
+  // texture or shadow map. Each destination keeps its own restrained accent.
+  const accentBase={model:'#78cad7',digital:'#ad94cf',wall:'#e3ba88'};
+  const accentMaterials=Object.fromEntries(Object.entries(accentBase).map(([area,color])=>{const material=new THREE.MeshBasicMaterial({color,toneMapped:false});material.name=`Studio ${area} interaction accent`;return [area,material];}));
+  const accentColor=new THREE.Color();let hoveredArea=null,selectedArea=null;
+  function updateAccents(){for(const[area,material]of Object.entries(accentMaterials)){accentColor.set(accentBase[area]).multiplyScalar(area===hoveredArea?1.35:area===selectedArea?1.05:.4);material.color.copy(accentColor);}}
+  function setHover(area){const next=Object.hasOwn(interactive,area)?area:null;if(next===hoveredArea)return;hoveredArea=next;updateAccents();}
+  updateAccents();
   const boxCache=new Map(),cylinderCache=new Map();
-  function mesh(geo,mat,parent=staticParts){const o=new THREE.Mesh(geo,mat);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+  function mesh(geo,mat,parent=staticParts){const o=new THREE.Mesh(geo,mat);const accent=Object.values(accentMaterials).includes(mat);o.castShadow=!accent;o.receiveShadow=!accent;parent.add(o);return o;}
   // Physical UVs survive static batching: one UV unit is one local world unit.
   // Material texture.repeat=.5 therefore gives a two-metre surface tile.
   function physicalUV(geo){const p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv;for(let i=0;i<p.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),nz=Math.abs(n.getZ(i));if(nx>ny&&nx>nz)uv.setXY(i,p.getZ(i),p.getY(i));else if(ny>nz)uv.setXY(i,p.getX(i),p.getZ(i));else uv.setXY(i,p.getX(i),p.getY(i));}uv.needsUpdate=true;return geo;}
@@ -65,8 +73,8 @@ export function createStudio(scene) {
   const table=interactive.model;
   roundedSlab(8.05,5.2,.18,0,.96,1,pbr.table,table,.12);
   roundedSlab(6.7,4.25,.85,0,.05,1,pbr.wall,table,.05);
-  for(const x of [-3.99,3.99])box(.022,.018,5.04,x,1.157,1,cyan,table);
-  for(const z of [-1.56,3.56])box(7.98,.018,.022,0,1.157,z,cyan,table);
+  for(const x of [-3.99,3.99])box(.022,.018,5.04,x,1.157,1,accentMaterials.model,table);
+  for(const z of [-1.56,3.56])box(7.98,.018,.022,0,1.157,z,accentMaterials.model,table);
   for(const x of [-3.91,3.91])box(.012,.006,4.88,x,1.169,1,steel,table);
   for(const z of [-1.44,3.44])box(7.82,.006,.012,0,1.169,z,steel,table);
   for(const x of [-3.72,3.72])for(const z of [-1.3,3.3]){cyl(.018,.006,x,1.173,z,steel,table);box(.022,.007,.003,x,1.175,z,black,table);}
@@ -94,8 +102,8 @@ export function createStudio(scene) {
   // Authoring coordinates remain local, so papers, screens and labels retain alignment.
   wall.rotation.y=Math.PI/2;wall.position.set(-3.05,0,-6.05);
   box(7.4,4.15,.12,-6.55,3.8,-7.65,wood,wall);box(7.25,4,.025,-6.55,3.8,-7.575,std('#3e4646'),wall);
-  for(const x of [-10.23,-2.87]){box(.037,4.12,.043,x,3.8,-7.56,steel,wall);box(.012,4.08,.013,x+(x<-6?.027:-.027),3.8,-7.532,black,wall);}
-  for(const y of [1.74,5.86])box(7.4,.037,.043,-6.55,y,-7.56,steel,wall);
+  for(const x of [-10.23,-2.87]){box(.037,4.12,.043,x,3.8,-7.56,accentMaterials.wall,wall);box(.012,4.08,.013,x+(x<-6?.027:-.027),3.8,-7.532,black,wall);}
+  for(const y of [1.74,5.86])box(7.4,.037,.043,-6.55,y,-7.56,accentMaterials.wall,wall);
   const plaque=canvasSurface(768,96,(c,w,h)=>{c.fillStyle='#172d3e';c.fillRect(0,0,w,h);c.fillStyle='#c5d5dd';c.font='24px monospace';c.fillText('GE  /  EXPERIENCE & LEADERSHIP',29,58);},false,2);
   box(2.92,.38,.035,-6.55,1.46,-7.53,steel,wall);const plaqueFace=mesh(new THREE.PlaneGeometry(2.84,.355),plaque.material,wall);plaqueFace.position.set(-6.55,1.46,-7.508);
   let wallTopic=0;
@@ -145,10 +153,28 @@ export function createStudio(scene) {
   box(4.9,.045,.07,7,.86,-6.37,steel,digital);
   box(5.69,.013,.015,7,.944,-4.872,steel,digital);
   for(const x of [5.55,8.3]){cyl(.057,.008,x,.968,-6.23,black,digital);const grommet=mesh(new THREE.TorusGeometry(.055,.006,4,12),steel,digital);grommet.rotation.x=Math.PI/2;grommet.position.set(x,.974,-6.23);}
-  box(5.6,.02,.025,7,.88,-4.84,purple,digital);
-  const deskScreen=canvasSurface(1024,640,(c,w,h)=>drawMonitor(c,w,h,0,false),true,3);
-  const secondScreen=canvasSurface(1024,640,(c,w,h)=>drawMonitor(c,w,h,0,true),true,3);
-  function drawMonitor(c,w,h,step,detail,tab='os'){
+  box(5.6,.02,.025,7,.88,-4.84,accentMaterials.digital,digital);
+  // 2048 px wide monitor textures stay crisp at inspection distance while
+  // avoiding two 3072 px uploads every time a register summary changes.
+  const deskScreen=canvasSurface(1024,640,(c,w,h)=>drawMonitor(c,w,h,0,false),true,2);
+  const secondScreen=canvasSurface(1024,640,(c,w,h)=>drawMonitor(c,w,h,0,true),true,2);
+  function drawActionsMonitor(c,w,h,detail,summary={total:0,reviewed:0,open:0,completed:0}){
+    c.fillStyle='#0c1c2b';c.fillRect(0,0,w,h);c.fillStyle='#193044';c.fillRect(0,0,w,70);
+    c.fillStyle='#e6f7ff';c.font='bold 29px sans-serif';c.fillText('NOTES → ACTIONS',32,46);c.fillStyle='#8acbd9';c.font='15px monospace';c.fillText('WORKING AUTOMATION',w-236,44);
+    c.fillStyle='#102638';c.fillRect(0,70,177,h-70);['Notes','Register','Review','Export'].forEach((label,i)=>{c.fillStyle=i===1?'#b7e8ef':'#8aa9be';c.font='20px sans-serif';c.fillText(label,25,125+i*66);});
+    c.fillStyle='#e5f3fb';c.font='28px sans-serif';c.fillText(detail?'Review before the handover':'Turn notes into owned actions.',211,125);c.fillStyle='#8baabd';c.font='16px monospace';c.fillText(detail?'CURRENT REGISTER / YOUR BROWSER':'EDIT INPUT → STRUCTURE → REVIEW → EXPORT',211,159);
+    const metrics=[['ACTIONS',summary.total],['REVIEWED',summary.reviewed],['OPEN',summary.open]];
+    metrics.forEach(([label,value],i)=>{const x=212+i*258;c.fillStyle='#183347';c.fillRect(x,198,230,135);c.fillStyle=i===1?'#a0ddc9':'#b9dfe9';c.font='44px sans-serif';c.fillText(String(value),x+20,260);c.font='15px monospace';c.fillStyle='#91b1c5';c.fillText(label,x+20,307);});
+    if(detail){
+      const fraction=summary.total?summary.reviewed/summary.total:0;c.fillStyle='#294659';c.fillRect(212,382,746,12);c.fillStyle='#8ed3bc';c.fillRect(212,382,746*fraction,12);c.fillStyle='#c9e1ec';c.font='23px sans-serif';c.fillText(summary.total?`${summary.reviewed} of ${summary.total} actions reviewed`:'Your register is ready to begin.',212,438);
+      c.fillStyle='#92afc1';c.font='18px sans-serif';c.fillText(summary.total?`${summary.completed} completed · ${summary.open} open`:'Load the sample or use your own meeting notes.',212,480);c.fillText('Confirm owners, dates and next steps before export.',212,523);
+    }else{
+      const labels=['INPUT','STRUCTURE','REVIEW'];labels.forEach((label,i)=>{const x=228+i*252;c.fillStyle='#203e53';c.fillRect(x,386,210,62);c.strokeStyle='#6c9daf';c.lineWidth=2;c.strokeRect(x,386,210,62);c.fillStyle='#d9f3fb';c.font='18px monospace';c.fillText(label,x+24,424);});c.fillStyle='#9ab9cb';c.font='19px sans-serif';c.fillText('Edit the register. Review the result. Export a CSV.',212,505);c.font='17px sans-serif';c.fillText('Open the working tool at this workstation.',212,544);
+    }
+    c.fillStyle='#7396ad';c.font='14px monospace';c.fillText('LOCAL RULES / NO LIVE AI / NOTES ARE NOT UPLOADED',212,604);
+  }
+  function drawMonitor(c,w,h,step,detail,tab='actions',summary){
+    if(tab==='actions'){drawActionsMonitor(c,w,h,detail,summary);return;}
     const ai=tab==='ai';
     c.fillStyle='#101c29';c.fillRect(0,0,w,h);c.fillStyle='#202b3c';c.fillRect(0,0,w,69);c.fillStyle='#e2e8ed';c.font='bold 28px sans-serif';c.fillText(ai?'AI WORKFLOW':'LAYOUT OS',32,45);c.font='15px monospace';c.fillStyle='#b29ad6';c.fillText(ai?'SCRIPTED DEMO':'WORKFLOW DEMO',w-210,42);
     c.fillStyle='#172637';c.fillRect(0,69,178,h-69);(ai?['Input','Suggestions','Review','Approve']:['Overview','Projects','Team','Reviews']).forEach((t,i)=>{c.fillStyle=i===1?'#bda1e9':'#839bae';c.font='20px sans-serif';c.fillText(t,25,125+i*65);});
@@ -215,8 +241,8 @@ export function createStudio(scene) {
   plant(0,-.7,.65,shelf,3.35);
 
   // Restrained practical lights. Main scene illumination remains owned by caller.
-  const lampWarm=new THREE.PointLight('#ffcb94',8,10,2);lampWarm.position.set(-6.5,5.7,-6.9);wall.add(lampWarm);
-  const lampCool=new THREE.PointLight('#bd9aeb',5,7,2);lampCool.position.set(7,2,-5);root.add(lampCool);
+  const lampWarm=new THREE.PointLight('#ffcb94',10,10,2);lampWarm.position.set(-6.5,5.7,-6.9);wall.add(lampWarm);
+  const lampCool=new THREE.PointLight('#bd9aeb',5.5,7,2);lampCool.position.set(7,2,-5);root.add(lampCool);
 
   // Preserve interactive ownership while batching each group's static meshes.
   function markArea(g,area){g.traverse(o=>{if(o.isMesh)o.userData.area=area;});}
@@ -247,13 +273,18 @@ export function createStudio(scene) {
     {minX:-7.4,maxX:-6.5,minZ:3.5,maxZ:4.4}
   ];
   const hotspotPositions={model:new THREE.Vector3(2.3,2,3.3),digital:new THREE.Vector3(7,2.55,-5.65),wall:new THREE.Vector3(-10.45,6.4,.5)};
-  let lastStep=-1,lastTopic=-1,lastTab='';
+  const emptySummary=Object.freeze({}),monitorSummary={total:0,reviewed:0,open:0,completed:0};
+  const count=value=>{const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.floor(n)):0;};
+  let lastStep=-1,lastTopic=-1,lastTab='',monitorRevision=0;
   function update(t,dt,state={}){
     windowScene.update(t,dt,state);
-    const step=Math.max(0,Math.min(3,Number(state.digitalStep)||0)),tab=state.digitalTab==='ai'?'ai':'os';if(step!==lastStep||tab!==lastTab){deskScreen.update((c,w,h)=>drawMonitor(c,w,h,step,false,tab));secondScreen.update((c,w,h)=>drawMonitor(c,w,h,step,true,tab));lastStep=step;lastTab=tab;}
+    const step=Math.max(0,Math.min(3,Number(state.digitalStep)||0)),tab=state.digitalTab==='ai'?'ai':state.digitalTab==='os'?'os':'actions';
+    const raw=state.labSummary||emptySummary,total=count(raw.total),reviewed=Math.min(total,count(raw.reviewed)),open=Math.min(total,count(raw.open)),completed=Math.min(total,count(raw.completed??total-open));
+    const summaryChanged=total!==monitorSummary.total||reviewed!==monitorSummary.reviewed||open!==monitorSummary.open||completed!==monitorSummary.completed;
+    if(tab!==lastTab||(tab==='actions'?summaryChanged:step!==lastStep)){monitorSummary.total=total;monitorSummary.reviewed=reviewed;monitorSummary.open=open;monitorSummary.completed=completed;deskScreen.update((c,w,h)=>drawMonitor(c,w,h,step,false,tab,monitorSummary));secondScreen.update((c,w,h)=>drawMonitor(c,w,h,step,true,tab,monitorSummary));lastStep=step;lastTab=tab;monitorRevision++;}
     const topic=Math.max(0,Math.min(2,Number(state.wallTopic)||0));if(topic!==lastTopic){wallMain.update((c,w,h)=>drawWall(c,w,h,topic));lastTopic=topic;wallTopic=topic;}
-    lampCool.intensity=state.area==='digital'?11:7;lampWarm.intensity=state.area==='wall'?20:15;
+    const nextSelected=Object.hasOwn(interactive,state.area)?state.area:null;if(nextSelected!==selectedArea){selectedArea=nextSelected;updateAccents();lampCool.intensity=selectedArea==='digital'?8:5.5;lampWarm.intensity=selectedArea==='wall'?13:10;}
   }
-  return {root,tableTop:1.15,interactive,colliders,anchors,hotspotPositions,windowScene,update};
+  return {root,tableTop:1.15,interactive,colliders,anchors,hotspotPositions,windowScene,update,setHover,get hoveredArea(){return hoveredArea;},get monitorRevision(){return monitorRevision;}};
 }
 
