@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {modelMaterials} from './materials.js';
+import {createMepExperience} from './mep-experience.js';
 
 /** A furnished, sectional building model. All dimensions and engineering are illustrative. */
 export function createProjectModel(scene) {
@@ -111,11 +112,11 @@ export function createProjectModel(scene) {
   softBox(5.52,.11,3.52,0,.02,0,M.stone,roof,.035);for(const z of [-1.74,1.74])softBox(5.52,.075,.055,0,.1,z,M.edge,roof,.012);
   const roofServices={};for(const id of Object.keys(systems)){const g=new THREE.Group();g.position.y=3.15;g.userData.system=id;systems[id].add(g);roofServices[id]=g;}
   // Compact rooftop AHU and heat-rejection unit connected to the same shaft.
-  box(1.25,.32,.57,1.25,.25,-1.02,M.white,roofServices.hvac);box(1.28,.04,.6,1.25,.43,-1.02,M.frame,roofServices.hvac);
+  const ahuBody=box(1.25,.32,.57,1.25,.25,-1.02,M.white,roofServices.hvac);ahuBody.userData.dynamic=true;ahuBody.userData.mepTarget='ahu';box(1.28,.04,.6,1.25,.43,-1.02,M.frame,roofServices.hvac);
   for(let x=.75;x<1.8;x+=.11)box(.04,.24,.015,x,.25,-.72,M.hvac,roofServices.hvac);
   duct([[2.41,.15,-1.32],[2.41,.25,-1.32],[1.88,.25,-1.32]],.13,.11,roofServices.hvac);
   for(const x of [.95,1.55]){cyl(.14,.025,x,.47,-1.02,M.frame,roofServices.hvac);const fan=new THREE.Group();fan.position.set(x,.488,-1.02);fan.userData.dynamic=true;roofServices.hvac.add(fan);for(let i=0;i<4;i++){const b=box(.23,.012,.045,0,0,0,M.black,fan);b.rotation.y=i*Math.PI/4;}fans.push(fan);}
-  pipe([[2.53,.13,-1.32],[2.53,.2,-.5],[1.2,.2,-.5],[1.2,.25,-.73]],.016,M.plumbing,roofServices.plumbing);
+  // The AHU cooling connection is a distinct closed loop in the connected inspection.
   pipe([[2.13,.12,-1.34],[2.13,.18,-.65],[1.7,.18,-.65],[1.7,.25,-.74]],.012,M.electrical,roofServices.electrical);
   box(.25,.28,.15,2.05,.23,-.35,M.frame,roofServices.electrical);box(.12,.05,.014,2.05,.28,-.264,M.bms,roofServices.bms);
   // Small occupied roof terrace gives the upper model a human-scale ending.
@@ -132,20 +133,24 @@ export function createProjectModel(scene) {
   }
   shaftBack.userData.dynamic=true;shaftSide.userData.dynamic=true;
   floors.forEach(f=>batch(f));for(const level of services)Object.values(level).forEach(g=>batch(g));batch(roof);Object.values(roofServices).forEach(g=>batch(g));fans.forEach(f=>batch(f));batch(root,false);
-  let runTime=0;
+  const experience=createMepExperience({root,roof,floors});
+  let runTime=0,visualKey='';
   function update(t,dt,state={}){
-    const reveal=THREE.MathUtils.clamp(Number(state.reveal)||0,0,1),power=state.power!==false,motion=state.motion!==false,layer=state.layer||'all',highlight=state.serviceGlow!==false;
+    const reveal=THREE.MathUtils.clamp(Number(state.reveal)||0,0,1),power=state.power!==false,motion=state.motion!==false,layer=state.layer||'all',highlight=state.serviceGlow!==false,inspection=(state.area===undefined||state.area==='model')&&(state.modelMode==='trace'||state.modelMode==='challenge');
     if(motion)runTime+=dt;
     floors.forEach((f,i)=>{f.position.y=f.userData.baseY+i*reveal*.32;for(const s of Object.values(services[i]))s.position.y=f.position.y;ceilings[i].opacity=.94-reveal*.88;});
     roof.position.y=3.15+reveal*1.5;Object.values(roofServices).forEach(g=>g.position.y=roof.position.y);
     const top=roof.position.y+.12;shaftBack.scale.y=top;shaftBack.position.y=top/2;shaftSide.scale.y=top;shaftSide.position.y=top/2;
     risers.forEach(r=>{r.o.scale.y=top;r.o.position.y=top/2;});
     for(const[id,g]of Object.entries(systems))g.visible=layer==='all'||layer===id;
-    flows.forEach(f=>{f.object.visible=power;if(power)f.object.position.copy(f.curve.getPoint((runTime*.12+f.offset)%1));});
+    flows.forEach(f=>{f.object.visible=power&&!inspection;if(power&&!inspection)f.object.position.copy(f.curve.getPoint((runTime*.12+f.offset)%1));});
     if(power&&motion)fans.forEach(f=>f.rotation.y+=dt*5);
-    serviceVisuals.forEach(s=>{s.material.emissiveIntensity=power?(highlight?s.glow:.055):0;s.material.color.copy(s.color).multiplyScalar(power?1:.55);});
-    M.light.emissiveIntensity=power?.8:.02;M.light.color.set(power?'#f3d5aa':'#656c67');M.screen.color.set(power?'#42616a':'#22313a');
+    const nextVisualKey=`${power}:${highlight}:${inspection}`;
+    if(visualKey!==nextVisualKey){visualKey=nextVisualKey;serviceVisuals.forEach(s=>{s.material.emissiveIntensity=power?(inspection?.02:highlight?s.glow:.055):0;s.material.color.copy(s.color).multiplyScalar(inspection?.2:power?1:.55);});
+      M.light.emissiveIntensity=power?.8:.02;M.light.color.set(power?'#f3d5aa':'#656c67');M.screen.color.set(power?'#42616a':'#22313a');
+    }
+    experience.update(t,dt,state);
   }
   update(0,0,{});
-  return {root,floors,roof,systems,update};
+  return {root,floors,roof,systems,experience,update};
 }

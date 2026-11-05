@@ -1,8 +1,14 @@
-# Giorgi Eradze — The Studio · V1
+# Giorgi Eradze — The Studio · V2
 
 A personal portfolio built as an explorable Three.js studio. Walk or orbit around the room, inspect the occupied building and its MEP systems, explore the digital lab, and visit the experience and leadership wall.
 
-This is a standalone static export of source revision `fb67a33df4714355ee9b70b1986c3e6f32c16e6f`, configured for GitHub Pages at https://eradze3.github.io/.
+This is a standalone static export, configured for GitHub Pages at https://eradze3.github.io/.
+
+## V2 interactions
+
+At the model table, select Connections to trace the rooftop AHU’s electrical feeder, supply air, closed cooling-water loop and BMS connection. Select Challenge to compare two cable-tray routes around a fixed duct and a maintenance-access envelope. The displayed route geometry drives the checks. The model and challenge remain illustrative; real client projects will be added separately.
+
+The overlay meshes are instanced, add no shadow casters and avoid bloom or other post-processing. Ambient motion can be paused.
 
 ## Hosting
 
@@ -10,7 +16,7 @@ Put these files directly in the repository root, with `index.html`, `.nojekyll`,
 
 For a local preview, serve this directory over HTTP, for example with `python -m http.server 8000`, then open `http://localhost:8000/`. Opening `index.html` directly as a file can prevent module loading.
 
-The default rendering ceiling is 1080p. Navigation help offers other resolution settings. Desktop walk mode uses mouse look and WASD or arrow keys; touch uses drag-look and the direction pad. Escape releases mouse look. Resume exploring restores the previous position after entering an area.
+New visitors get automatic resolution adjustment with a 1080p ceiling. Saved fixed-quality preferences are preserved. Navigation help offers other resolution settings. Desktop walk mode uses mouse look and WASD or arrow keys; touch uses drag-look and the direction pad. Escape releases mouse look. Resume exploring restores the previous position after entering an area.
 
 ## Assets and credits
 
